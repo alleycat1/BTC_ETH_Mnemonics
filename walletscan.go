@@ -278,20 +278,19 @@ type WalletResult struct {
 	PrivateKey	 string
 }
 
-func generateBtcWallet(index int, number int, results chan<- WalletResult, wg *sync.WaitGroup) {
+func generateBtcWallet(mnemonic string, index int, results chan<- WalletResult, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	for {
-		compress := true
-		pass := ""
-		mnemonic := ""
+	compress := true
+	pass := ""
 
-		km, err := NewKeyManager(mnemonic, pass)
-		if err != nil {
-			log.Fatal(err)
-		}
+	km, err := NewKeyManager(mnemonic, pass)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-		for i := 0; i < number; i++ {
+	for i := 0; ; i++{
+		{
 			key, err := km.GetKey(PurposeBIP44, CoinTypeBTC, 0, 0, uint32(i))
 			if err != nil {
 				log.Fatal(err)
@@ -317,14 +316,16 @@ func generateBtcWallet(index int, number int, results chan<- WalletResult, wg *s
 				defer outFile.Close()
 			
 				_, err = outFile.WriteString(km.Mnemonic)
+				_, err = outFile.WriteString(wif)
 				if err != nil {
 					fmt.Println("Error writing to file:", err)
 					return
 				}
 			}
+			fmt.Println("Checked wallet:", address)
 		}
 
-		for i := 0; i < number; i++ {
+		{
 			key, err := km.GetKey(PurposeBIP49, CoinTypeBTC, 0, 0, uint32(i))
 			if err != nil {
 				log.Fatal(err)
@@ -350,14 +351,16 @@ func generateBtcWallet(index int, number int, results chan<- WalletResult, wg *s
 				defer outFile.Close()
 			
 				_, err = outFile.WriteString(km.Mnemonic)
+				_, err = outFile.WriteString(wif)
 				if err != nil {
 					fmt.Println("Error writing to file:", err)
 					return
 				}
 			}
+			fmt.Println("Checked wallet:", address)
 		}
 
-		for i := 0; i < number; i++ {
+		{
 			key, err := km.GetKey(PurposeBIP84, CoinTypeBTC, 0, 0, uint32(i))
 			if err != nil {
 				log.Fatal(err)
@@ -383,14 +386,16 @@ func generateBtcWallet(index int, number int, results chan<- WalletResult, wg *s
 				defer outFile.Close()
 			
 				_, err = outFile.WriteString(km.Mnemonic)
+				_, err = outFile.WriteString(wif)
 				if err != nil {
 					fmt.Println("Error writing to file:", err)
 					return
 				}
 			}
+			fmt.Println("Checked wallet:", address)
 		}
 
-		for i := 0; i < number; i++ {
+		{
 			key, err := km.GetKey(PurposeBIP86, CoinTypeBTC, 0, 0, uint32(i))
 			if err != nil {
 				log.Fatal(err)
@@ -416,67 +421,95 @@ func generateBtcWallet(index int, number int, results chan<- WalletResult, wg *s
 				defer outFile.Close()
 			
 				_, err = outFile.WriteString(km.Mnemonic)
+				_, err = outFile.WriteString(wif)
 				if err != nil {
 					fmt.Println("Error writing to file:", err)
 					return
 				}
 			}
+			fmt.Println("Checked wallet:", address)
 		}
-		fmt.Println("Checked Mnemonics:", km.Mnemonic);
 	}
 }
 
-func generateEthWallet(index int, number int, results chan<- WalletResult, wg *sync.WaitGroup) {
+func generateEthWallet(mnemonic string, index int, results chan<- WalletResult, wg *sync.WaitGroup) {
 	defer wg.Done()
 
-	for {
-		pass := ""
-		mnemonic := ""
+	pass := ""
 
-		km, err := NewKeyManager(mnemonic, pass)
+	km, err := NewKeyManager(mnemonic, pass)
+	if err != nil {
+		log.Fatal(err)
+	}
+	
+	for i := 0; ; i++{
+		key, err := km.GetKey(PurposeBIP44, CoinTypeETH, 0, 0, uint32(i))
 		if err != nil {
 			log.Fatal(err)
 		}
-		
-		for i := 0; i < number; i++ {
-			key, err := km.GetKey(PurposeBIP44, CoinTypeETH, 0, 0, uint32(i))
-			if err != nil {
-				log.Fatal(err)
+
+		address := strings.ToLower(strings.TrimPrefix(ethereumAddress(key.bip32Key.Key), "0x"))
+		exists := ethAddresses[address]
+
+		if exists == 1 {
+			results <- WalletResult{
+				Mnemonic:     km.Mnemonic,
+				Address:      address,
+				PrivateKey:	  "PK",
 			}
-
-			address := strings.ToLower(strings.TrimPrefix(ethereumAddress(key.bip32Key.Key), "0x"))
-			exists := ethAddresses[address]
-
-			if exists == 1 {
-				results <- WalletResult{
-					Mnemonic:     km.Mnemonic,
-					Address:      address,
-					PrivateKey:	  "PK",
-				}
-				outFile, err := os.Create(address)
-				if err != nil {
-					fmt.Println("Error creating file:", err)
-					return
-				}
-				defer outFile.Close()
-			
-				_, err = outFile.WriteString(km.Mnemonic)
-				if err != nil {
-					fmt.Println("Error writing to file:", err)
-					return
-				}
+			outFile, err := os.Create(address)
+			if err != nil {
+				fmt.Println("Error creating file:", err)
+				return
+			}
+			defer outFile.Close()
+		
+			_, err = outFile.WriteString(km.Mnemonic)
+			if err != nil {
+				fmt.Println("Error writing to file:", err)
+				return
 			}
 		}
-		fmt.Println("Checked Mnemonics:", km.Mnemonic);
+		fmt.Println("Checked wallet:", address)
 	}
 }
 
 func main() {
+	var mnemonics string
+
 	numWorkers := flag.Int("workers", 4, "Thread count")
-	number := flag.Int("n", 5, "set number of keys per mnemonics to generate")
 	fileName := flag.String("wallets", "btc.txt", "Name of the file containing the wallet addresses")
 	coinType := flag.Int("type", 0, "BTC - 0, Ethereum - 1")
 	flag.Parse()
+
+	file, err := os.Open("mnemonics.txt")
+	if err != nil {
+		fmt.Println("Error opening file:", err)
+		return
+	}
+	defer file.Close()
+	
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		mnemonics = scanner.Text()
+		parts := strings.Fields(mnemonics)
+		if len(parts) != 12 {
+			fmt.Printf("Invalid mnemonics!\n")
+			return
+		}
+		break
+	}
+
+	if !bip39.IsMnemonicValid(mnemonics) {
+		log.Fatal("Invalid mnemonic")
+		return
+	}
+
+	//fmt.Println(mnemonicsIn)
+
+	if err := scanner.Err(); err != nil {
+		fmt.Println("Error reading file:", err)
+	}
 
 	if *coinType == 0 {
 		btcAddresses = make(map[string]int)
@@ -533,9 +566,9 @@ func main() {
 	for i := 0; i < *numWorkers; i++ {
 		wg.Add(1)
 		if *coinType == 0 {
-			go generateBtcWallet(i, *number, results, &wg)
+			go generateBtcWallet(mnemonics, i, results, &wg)
 		} else {
-			go generateEthWallet(i, *number, results, &wg)
+			go generateEthWallet(mnemonics, i, results, &wg)
 		}
 	}
 
