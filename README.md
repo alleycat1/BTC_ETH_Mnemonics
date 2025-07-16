@@ -4,14 +4,14 @@ A Go program designed to create private keys, derive corresponding public keys f
 # how to use
 This software requires the correct 12 mnemonics in the "mnemonics.txt", You can input or update the mnemonics in this file.
 
-And start the application with running these files.
-
-Normal mode: 4 threads for BTC wallet generation, and load richlist in the btc.txt
+Run with normal mode:
+  ./start_btc_walletscan.bat
+  ./start_eth_walletscan.bat
   ./walletscan.exe
-  ./walletscan.bat
 
-Extended mode: You can change the parameters in this file.
-  ./walletscan.bat
+Extended mode: You can change the parameters in these files.
+  ./start_btc_walletscan.bat
+  ./start_eth_walletscan.bat
 
 Parameters:
   type - BTC: 0, ETH: 1
